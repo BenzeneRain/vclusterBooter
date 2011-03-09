@@ -1,0 +1,4 @@
+tags
+*.pyc
+*.py~
+*.conf~
