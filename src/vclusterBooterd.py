@@ -1,9 +1,12 @@
 #!/usr/bin/env python
 
 import os, sys
-import json
+import pickle
 import ConfigParser
 import socket
+import hashlib
+import subprocess
+import random
 
 import vmCommand
 
@@ -11,8 +14,81 @@ import vmCommand
 
 class commandEngine:
 
+    _command = None
+
     def __init__(self, command):
-        pass
+        self._command = command
+
+    # execute the command
+    # return: [ret, msg]
+    # ret is the return code
+    # msg is the message that explains the code
+    def run(self):
+        if(self._command != None):
+
+            if(self._command.commID == 0):
+
+                networkNameMap = {}
+                vnetFilename = ""
+                # First add virtual networks
+                for networkName in self._command.cluster.networks:
+                    networkSetting = self._command.cluster.networks[networkName]
+                    if(networkSetting[0] == "private"):
+                        bridge = "eth1"
+
+                        networkTemplate = """
+                        NAME = %s
+                        TYPE = FIXED
+                        BRIDGE = %s
+                        """
+
+                        hash = hashlib.sha1(networkName + " - " + str(random.random()))
+                        UID = networkName + " - " + str(hash.hexdigest());
+                        networkNameMap[networkName] = UID
+
+                        networkTemplate = networkTemplate % (UID, bridge) 
+
+                        # add the LEASE = [IP=X.X.X.X] part
+                        for i in range(self._command.cluster.vmNR):
+                            lease = "LEASE = [IP=%s]"
+
+                            # We need to do the check here
+                            ipaddr = networkSetting[1]
+                            addrParts = ipaddr.split(".");
+                            addrParts[3] = str(int(addrPart[3]) + i)
+                            ipaddr = ".".join(addrParts)
+
+                            lease = lease % (ipaddr, )
+                            networkTemplate += lease
+
+                        # write the template to the file
+                        hash = hashlib.sha1(str(andom.random()))
+                        vnetFilename = "/tmp/" + hash.hexdigest() + ".vnet"
+
+                        fout = open(vnetFilename, "w")
+                        fout.write(networkTemplate)
+                        fout.close()
+
+                        # create the vnet
+                        proc = subprocess.Popen(["onevnet", "create", "vnetFilename"])
+                        proc.wait()
+
+                        # delete the vnet template file after we create the vnet
+                        os.remove(vnetFilename)
+                    else:
+                        # we do not need to care generating the vnetwork template for the public network
+                        pass
+
+
+                # Second create virtual machines
+
+            elif(self._command.commID == 1):
+                pass
+            else:
+                return [401, "Undefined command"]
+
+        else:
+            return [400, "No command found"]
 
 class Listener:
     _bindAddress = None
@@ -77,7 +153,7 @@ class Listener:
             rawDataSeg = conn.recv(4096)
             rawData.extend(rawDataSeg)
 
-        return json.loads(rawData)
+        return pickle.loads(rawData)
 
     # send the execution result back
     def _sendMessage(conn):
@@ -93,6 +169,7 @@ class vClusterBooterd:
 
     def __init__(self, configFilename = 'vclusterBooterd.conf'):
         try:
+            random.seed()
 
             # read the configs from the configuration file
             config = ConfigParser.ConfigParser()
