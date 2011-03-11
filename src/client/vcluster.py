@@ -3,6 +3,8 @@
 import os, sys
 import socket
 
+from lib import vmCommand
+
 class messageSender:
     pass
 

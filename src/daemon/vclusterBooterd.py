@@ -8,7 +8,7 @@ import hashlib
 import subprocess
 import random
 
-import vmCommand
+from lib import vmCommand
 
 #WARNING: This program is written in Python 2.6
 
