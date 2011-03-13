@@ -98,7 +98,7 @@ OS = [
         bootloader = "/usr/bin/pygrub",
         root = "%s"]
 """
-            footer = "RANK = FREEMEMORY\n"
+            footerTemplate = "REQUIREMENTS = \"FREEMEMORY > %s\"\nRANK = \"- RUNNING_VMS\"\n"
 
             nicTemplate = "NIC = [NETWORK = \"%s\"]\n"
 
@@ -126,6 +126,7 @@ DISK = [
                     return [501, "Cannot find the root device"]
 
                 header = headerTemplate % (template.name, template.memory, rootDevice) 
+                footer = footerTemplate % (template.memory, )
 
                 nicList = ""
                 for nic in template.networkNames:
