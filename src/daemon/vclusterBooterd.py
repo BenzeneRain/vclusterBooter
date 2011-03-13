@@ -43,10 +43,10 @@ class commandEngine:
                     if(networkSetting[0] == "private"):
                         bridge = "eth1"
 
-                        networkTemplate = "NAME = %s\nTYPE = FIXED\nBRIDGE = %s\n"
+                        networkTemplate = "NAME = \"%s\"\nTYPE = FIXED\nBRIDGE = %s\n"
 
-                        hash = hashlib.sha1(networkName + " - " + str(random.random()))
-                        UID = networkName + " - " + str(hash.hexdigest());
+                        hash = hashlib.sha1(networkName + "-" + str(random.random()))
+                        UID = networkName + "-" + str(hash.hexdigest());
                         networkNameMap[networkName] = UID
 
                         networkTemplate = networkTemplate % (UID, bridge) 

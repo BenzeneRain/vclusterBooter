@@ -98,8 +98,8 @@ class confAnalyzer:
             command = vmCommand() 
             command.commID = 0
             command.cluster.vmNR = self._VM_NR
-            command.cluster.networks["pubnet"] = ["public", self._public_ip]
-            command.cluster.networks["privnet"] = ["private", self._start_ip]
+            command.cluster.networks["pubnet"] = ("public", self._public_ip)
+            command.cluster.networks["privnet"] = ("private", self._start_ip)
 
             vdisk = vDisks()
             vdisk.diskName = "1"

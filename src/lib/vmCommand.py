@@ -14,7 +14,7 @@ class vCluster:
     def __init__(self):
         self.vmNR = 0
         self.vmTemplates = []
-        # networks in formats of {network name: [public/private, subnet]}
+        # networks in formats of {network name: (public/private, subnet)}
         self.networks = {}
 
 class vmTemplate:
