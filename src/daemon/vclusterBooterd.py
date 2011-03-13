@@ -74,7 +74,7 @@ class commandEngine:
 
                         # create the vnet
                         try:
-                            proc = subprocess.Popen(["onevnet", "create", "vnetFilename"])
+                            proc = subprocess.Popen(["onevnet", "create", vnetFilename])
                             proc.wait()
                         except:
                             raise commandEngineError(420, "Fail to create vnet using"\
