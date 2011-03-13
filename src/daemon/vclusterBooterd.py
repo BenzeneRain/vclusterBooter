@@ -41,8 +41,6 @@ class commandEngine:
             numberOfNames = len(networkNames)
             # First add virtual networks
             for networkIndex in range(numberOfNames):
-                print "test"
-
                 networkName = networkNames[networkIndex]
                 networkSetting = self._command.cluster.networks[networkName]
                 if(networkSetting[0] == "private"):
