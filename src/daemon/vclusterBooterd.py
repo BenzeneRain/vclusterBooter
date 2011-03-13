@@ -90,6 +90,68 @@ class commandEngine:
                     continue
 
             # Second create virtual machines
+            headerTemplate = """
+NAME = "%s"
+MEMORY = %s
+OS = [
+        bootloader = "/usr/bin/pygrub",
+        root = "%s"]
+"""
+            footer = "RANK = FREEMEMORY\n"
+
+            nicTemplate = "NIC = [NETWORK = \"%s\"]\n"
+
+            diskTemplate = """
+DISK = [
+            source = "/srv/cloud/images/%s"
+            target = "%s"
+            readonly = "no"
+            clone = "no"]
+"""
+                
+            for vmIndex in range(int(self._command.cluster.vmNR)):
+                template = self._command.cluster.vmTemplates[vmIndex]
+                
+                rootDevice = ""
+
+                diskList = ""
+                for diskInfo in template.disks:
+                    diskDesc = diskTemplate % (diskInfo.diskName, diskInfo.diskTarget) 
+                    if int(diskInfo.isRoot) != 0:
+                        rootDevice = diskInfo.diskTarget
+                    diskList += diskDesc
+
+                if rootDevice == "":
+                    return [501, "Cannot find the root device"]
+
+                header = headerTemplate % (template.name, template.memory, rootDevice) 
+
+                nicList = ""
+                for nic in template.networkNames:
+                    nicDesc = nicTemplate % (networkNameMap[nic], )                     
+                    nicList += nicDesc
+
+                content = header + diskList + nicList + footer
+
+                # write the template to the file
+                hash = hashlib.sha1(str(random.random()))
+                vmFilename = "/tmp/" + hash.hexdigest() + ".vm"
+
+                fout = open(vmFilename, "w")
+                fout.write(content)
+                fout.close()
+
+                # create the vnet
+                try:
+                    proc = subprocess.Popen(["onevm", "create", vmFilename])
+                    proc.wait()
+                except:
+                    raise commandEngineError(420, "Fail to create vm using"\
+                            " command onevm and vm template file %s" % vmFilename)
+
+                os.remove(vmFilename)
+
+
             return [0, "successful"]
         elif(self._command.commID == 1):
             return [401, "Undefined command"]

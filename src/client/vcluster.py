@@ -103,7 +103,7 @@ class confAnalyzer:
 
             vdisk = vDisks()
             vdisk.diskName = "1"
-            vdisk.target = "sda1"
+            vdisk.diskTarget = "sda1"
             vdisk.isRoot = 1
 
             privTemplate = vmTemplate()
