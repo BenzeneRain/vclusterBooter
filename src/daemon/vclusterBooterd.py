@@ -8,9 +8,16 @@ import hashlib
 import subprocess
 import random
 
-from lib import vmCommand
+from lib.vmCommand import *
 
 #WARNING: This program is written in Python 2.6
+
+class commandEngineError:
+    def __init__(self, value, msg):
+        self.value = value
+        self.msg = msg
+    def __str__(self):
+        return "Command Engine Execute Error %d: %s" % (self.value, self.msg)
 
 class commandEngine:
 
@@ -36,11 +43,7 @@ class commandEngine:
                     if(networkSetting[0] == "private"):
                         bridge = "eth1"
 
-                        networkTemplate = """
-                        NAME = %s
-                        TYPE = FIXED
-                        BRIDGE = %s
-                        """
+                        networkTemplate = "NAME = %s\nTYPE = FIXED\nBRIDGE = %s\n"
 
                         hash = hashlib.sha1(networkName + " - " + str(random.random()))
                         UID = networkName + " - " + str(hash.hexdigest());
@@ -49,20 +52,20 @@ class commandEngine:
                         networkTemplate = networkTemplate % (UID, bridge) 
 
                         # add the LEASE = [IP=X.X.X.X] part
-                        for i in range(self._command.cluster.vmNR):
-                            lease = "LEASE = [IP=%s]"
+                        for i in range(int(self._command.cluster.vmNR)):
+                            lease = "LEASE = [IP=%s]\n"
 
                             # We need to do the check here
                             ipaddr = networkSetting[1]
                             addrParts = ipaddr.split(".");
-                            addrParts[3] = str(int(addrPart[3]) + i)
+                            addrParts[3] = str(int(addrParts[3]) + i)
                             ipaddr = ".".join(addrParts)
 
                             lease = lease % (ipaddr, )
                             networkTemplate += lease
 
                         # write the template to the file
-                        hash = hashlib.sha1(str(andom.random()))
+                        hash = hashlib.sha1(str(random.random()))
                         vnetFilename = "/tmp/" + hash.hexdigest() + ".vnet"
 
                         fout = open(vnetFilename, "w")
@@ -70,8 +73,12 @@ class commandEngine:
                         fout.close()
 
                         # create the vnet
-                        proc = subprocess.Popen(["onevnet", "create", "vnetFilename"])
-                        proc.wait()
+                        try:
+                            proc = subprocess.Popen(["onevnet", "create", "vnetFilename"])
+                            proc.wait()
+                        except:
+                            raise commandEngineError(420, "Fail to create vnet using"\
+                                    " command onevnet and vnet template file %s" % vnetFilename)
 
                         # delete the vnet template file after we create the vnet
                         os.remove(vnetFilename)
@@ -105,7 +112,7 @@ class Listener:
     # Running the Listner, which will listen for the incoming events
     def run(self):
 
-        # Apply a socket
+        # Apply for a socket
         try:
             self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         except socket.error, msg:
@@ -133,19 +140,23 @@ class Listener:
             conn, addr = self._sock.accept()
             print "Connection from ", addr
 
-            vmCommand = _readMessage(conn)
+            vmCommand = self._readMessages(conn)
             if vmCommand != None:
-                engine = commandEngine(vmCommand)
-                [ret, msg] = engine.run()
+                try:
+                    engine = commandEngine(vmCommand)
+                    [ret, msg] = engine.run()
+                except commandEngineError as e:
+                    msg = str(e)
+                    print msg
             else:
                 ret = 404 
                 msg = "ERROR 404, failed to extract the vmCommand packets"
 
-            conn.sendall(msg)
+            self._sendMessage(conn, msg)
             conn.close()
 
     # read and extract messages
-    def _readMessages(conn):
+    def _readMessages(self, conn):
         rawDataSeg = conn.recv(4096)
         rawData = rawDataSeg
 
@@ -156,8 +167,13 @@ class Listener:
         return pickle.loads(rawData)
 
     # send the execution result back
-    def _sendMessage(conn):
-        pass
+    def _sendMessage(self, conn, msg):
+        conn.send(msg)
+
+    def close(self):
+        if(self._sock != None):
+            self._sock.close()
+            self._sock = None
 
 
 # handling events 
@@ -187,9 +203,21 @@ class vClusterBooterd:
         except ConfigParser.Error:
             print "Failed to read the configuration" 
         except IOError:
+            if(self._listener != None):
+                self._listener.close()
             print "Failed to open the configuration File"
+        except commandEngineError as e:
+            if(self._listener != None):
+                self._listener.close()
+            print e
+        except KeyboardInterrupt as ki:
+            if(self._listener != None):
+                self._listener.close()
+            print ki
         except:
-            print "Unkown problem happens while reading configs"
+            if(self._listener != None):
+                self._listener.close()
+            print "Unknown problem happens while reading configs"
 
 if __name__ == '__main__':
 

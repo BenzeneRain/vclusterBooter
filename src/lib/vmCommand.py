@@ -4,14 +4,13 @@
 #       0       Create vClusters
 #       1       Destroy vClusters 
 class vmCommand:
-
     def __init__(self):
         self.commID = -1
         self.commGeneralArgs = {}
         self.cluster = vCluster()
+        self.passwdHash = ""
 
 class vCluster:
-
     def __init__(self):
         self.vmNR = 0
         self.vmTemplates = []
@@ -23,7 +22,8 @@ class vmTemplate:
     def __init__(self):
         self.name = ""
         self.memory = 0
-        self.networkNames = ""
+        self.networkNames = []
+        self.disks = []
 
 class vDisks:
 
