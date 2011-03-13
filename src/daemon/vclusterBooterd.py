@@ -7,6 +7,7 @@ import socket
 import hashlib
 import subprocess
 import random
+import time
 
 from lib.vmCommand import *
 
@@ -30,7 +31,7 @@ class commandEngine:
     # return: [ret, msg]
     # ret is the return code
     # msg is the message that explains the code
-    def run(self):
+    def run(self, sleepCycle = 0):
         if self._command is None:
             return [400, "No command found"]
         
@@ -150,7 +151,8 @@ DISK = [
                             " command onevm and vm template file %s" % vmFilename)
 
                 os.remove(vmFilename)
-
+                
+                time.sleep(sleepCycle)
 
             return [0, "successful"]
         elif(self._command.commID == 1):
@@ -171,7 +173,7 @@ class Listener:
         self._bindPort = hostport
 
     # Running the Listner, which will listen for the incoming events
-    def run(self):
+    def run(self, sleepCycle = 0):
 
         # Apply for a socket
         try:
@@ -206,7 +208,7 @@ class Listener:
                 try:
                     vmCommand = pickle.loads(rawData)
                     engine = commandEngine(vmCommand)
-                    [ret, msg] = engine.run()
+                    [ret, msg] = engine.run(sleepCycle)
                 except commandEngineError as e:
                     msg = str(e)
                     print msg
@@ -257,12 +259,13 @@ class vClusterBooterd:
     
             self._hostname = config.get('server', 'hostname')
             self._hostport = config.get('server', 'port')
+            self._vmCreateCycle = config.get('server', 'vmCreateCycle')
 
             print "Hostname is %s, port is %s" % (self._hostname, self._hostport)
 
             # Run the listener
             self._listener = Listener(self._hostname, self._hostport)
-            ret = self._listener.run()
+            ret = self._listener.run(int(self._vmCreateCycle))
 
         except ConfigParser.Error:
             print "Failed to read the configuration" 
