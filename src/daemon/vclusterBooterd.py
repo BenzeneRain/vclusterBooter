@@ -54,9 +54,9 @@ class commandEngine:
 
                     networkTemplate = networkTemplate % (UID, bridge) 
 
-                    # add the LEASE = [IP=X.X.X.X] part
+                    # add the LEASES = [IP=X.X.X.X] part
                     for i in range(int(self._command.cluster.vmNR)):
-                        lease = "LEASE = [IP=%s]\n"
+                        lease = "LEASES = [IP=%s]\n"
 
                         # We need to do the check here
                         ipaddr = networkSetting[1]
@@ -103,9 +103,9 @@ OS = [
 
             diskTemplate = """
 DISK = [
-            source = "/srv/cloud/images/%s"
-            target = "%s"
-            readonly = "no"
+            source = "/srv/cloud/images/%s",
+            target = "%s",
+            readonly = "no",
             clone = "no"]
 """
                 
