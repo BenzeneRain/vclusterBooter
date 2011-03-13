@@ -23,6 +23,7 @@ class commandEngineError:
 class commandEngine:
 
     _command = None
+    _vclusterInstance = []
 
     def __init__(self, command):
         self._command = command
@@ -36,136 +37,149 @@ class commandEngine:
             return [400, "No command found"]
         
         if(self._command.commID == 0):
-            networkNameMap = {}
-            vnetFilename = ""
-            networkNames = self._command.cluster.networks.keys()
-            numberOfNames = len(networkNames)
-            # First add virtual networks
-            for networkIndex in range(numberOfNames):
-                networkName = networkNames[networkIndex]
-                networkSetting = self._command.cluster.networks[networkName]
-                if(networkSetting[0] == "private"):
-                    bridge = "eth1"
+            [retCode, msg] = self._actionCreate(sleepCycle)
+        elif(self._command.commID == 1):
+            [retCode, msg] = self._actionDestroy()
+        elif(self._command.commID == 2):
+            [retCode, msg] = self._actionList()
+        else:
+            retCode = 401
+            msg = "Undefined Command"
 
-                    networkTemplate = "NAME = \"%s\"\nTYPE = FIXED\nBRIDGE = %s\n"
+        return [retCode, msg]
 
-                    hash = hashlib.sha1(networkName + "-" + str(random.random()))
-                    UID = networkName + "-" + str(hash.hexdigest());
-                    networkNameMap[networkName] = UID
+    def _actionCreate(self, sleepCycle):
+        networkNameMap = {}
+        vnetFilename = ""
+        networkNames = self._command.cluster.networks.keys()
+        numberOfNames = len(networkNames)
+        # First add virtual networks
+        for networkIndex in range(numberOfNames):
+            networkName = networkNames[networkIndex]
+            networkSetting = self._command.cluster.networks[networkName]
+            if(networkSetting[0] == "private"):
+                bridge = "eth1"
 
-                    networkTemplate = networkTemplate % (UID, bridge) 
+                networkTemplate = "NAME = \"%s\"\nTYPE = FIXED\nBRIDGE = %s\n"
 
-                    # add the LEASES = [IP=X.X.X.X] part
-                    for i in range(int(self._command.cluster.vmNR)):
-                        lease = "LEASES = [IP=%s]\n"
+                hash = hashlib.sha1(networkName + "-" + str(random.random()))
+                UID = networkName + "-" + str(hash.hexdigest());
+                networkNameMap[networkName] = UID
 
-                        # We need to do the check here
-                        ipaddr = networkSetting[1]
-                        addrParts = ipaddr.split(".");
-                        addrParts[3] = str(int(addrParts[3]) + i)
-                        ipaddr = ".".join(addrParts)
+                networkTemplate = networkTemplate % (UID, bridge) 
 
-                        lease = lease % (ipaddr, )
-                        networkTemplate += lease
+                # add the LEASES = [IP=X.X.X.X] part
+                for i in range(int(self._command.cluster.vmNR)):
+                    lease = "LEASES = [IP=%s]\n"
 
-                    # write the template to the file
-                    hash = hashlib.sha1(str(random.random()))
-                    vnetFilename = "/tmp/" + hash.hexdigest() + ".vnet"
+                    # We need to do the check here
+                    ipaddr = networkSetting[1]
+                    addrParts = ipaddr.split(".");
+                    addrParts[3] = str(int(addrParts[3]) + i)
+                    ipaddr = ".".join(addrParts)
 
-                    fout = open(vnetFilename, "w")
-                    fout.write(networkTemplate)
-                    fout.close()
+                    lease = lease % (ipaddr, )
+                    networkTemplate += lease
 
-                    # create the vnet
-                    try:
-                        proc = subprocess.Popen(["onevnet", "create", vnetFilename])
-                        proc.wait()
-                    except:
-                        raise commandEngineError(420, "Fail to create vnet using"\
-                                " command onevnet and vnet template file %s" % vnetFilename)
+                # write the template to the file
+                hash = hashlib.sha1(str(random.random()))
+                vnetFilename = "/tmp/" + hash.hexdigest() + ".vnet"
 
-                    # delete the vnet template file after we create the vnet
-                    os.remove(vnetFilename)
-                else:
-                    # we do not need to care generating the vnetwork template for the public network
-                    continue
+                fout = open(vnetFilename, "w")
+                fout.write(networkTemplate)
+                fout.close()
 
-            # Second create virtual machines
-            headerTemplate = """
+                # create the vnet
+                try:
+                    proc = subprocess.Popen(["onevnet", "create", vnetFilename])
+                    proc.wait()
+                except:
+                    raise commandEngineError(420, "Fail to create vnet using"\
+                            " command onevnet and vnet template file %s" % vnetFilename)
+
+                # delete the vnet template file after we create the vnet
+                os.remove(vnetFilename)
+            else:
+                # we do not need to care generating the vnetwork template for the public network
+                continue
+
+        # Second create virtual machines
+        headerTemplate = """
 NAME = "%s"
 MEMORY = %s
 OS = [
         bootloader = "/usr/bin/pygrub",
         root = "%s"]
 """
-            footerTemplate = "REQUIREMENTS = \"FREEMEMORY > %s\"\nRANK = \"- RUNNING_VMS\"\n"
+        footerTemplate = "REQUIREMENTS = \"FREEMEMORY > %s\"\nRANK = \"- RUNNING_VMS\"\n"
 
-            nicWithoutIPTemplate = "NIC = [NETWORK = \"%s\"]\n"
-            nicWithIPTemplate = "NIC = [NETWORK = \"%s\", IP=%s]\n"
+        nicWithoutIPTemplate = "NIC = [NETWORK = \"%s\"]\n"
+        nicWithIPTemplate = "NIC = [NETWORK = \"%s\", IP=%s]\n"
 
-            diskTemplate = """
+        diskTemplate = """
 DISK = [
             source = "/srv/cloud/images/%s",
             target = "%s",
             readonly = "no",
             clone = "no"]
 """
-                
-            for vmIndex in range(int(self._command.cluster.vmNR)):
-                template = self._command.cluster.vmTemplates[vmIndex]
-                
-                rootDevice = ""
+        for vmIndex in range(int(self._command.cluster.vmNR)):
+            template = self._command.cluster.vmTemplates[vmIndex]
+            
+            rootDevice = ""
 
-                diskList = ""
-                for diskInfo in template.disks:
-                    diskDesc = diskTemplate % (diskInfo.diskName, diskInfo.diskTarget) 
-                    if int(diskInfo.isRoot) != 0:
-                        rootDevice = diskInfo.diskTarget
-                    diskList += diskDesc
+            diskList = ""
+            for diskInfo in template.disks:
+                diskDesc = diskTemplate % (diskInfo.diskName, diskInfo.diskTarget) 
+                if int(diskInfo.isRoot) != 0:
+                    rootDevice = diskInfo.diskTarget
+                diskList += diskDesc
 
-                if rootDevice == "":
-                    return [501, "Cannot find the root device"]
+            if rootDevice == "":
+                return [501, "Cannot find the root device"]
 
-                header = headerTemplate % (template.name, template.memory, rootDevice) 
-                footer = footerTemplate % (str(int(template.memory) * 1024), )
+            header = headerTemplate % (template.name, template.memory, rootDevice) 
+            footer = footerTemplate % (str(int(template.memory) * 1024), )
 
-                nicList = ""
-                for nic in template.networkNames:
-                    (networkType, networkAddress) = self._command.cluster.networks[nic]
+            nicList = ""
+            for nic in template.networkNames:
+                (networkType, networkAddress) = self._command.cluster.networks[nic]
 
-                    if networkType == "public":
-                        nicDesc = nicWithIPTemplate % ("public-vnet", networkAddress)
-                    else:
-                        nicDesc = nicWithoutIPTemplate % (networkNameMap[nic], )                     
-                    nicList += nicDesc
+                if networkType == "public":
+                    nicDesc = nicWithIPTemplate % ("public-vnet", networkAddress)
+                else:
+                    nicDesc = nicWithoutIPTemplate % (networkNameMap[nic], )                     
+                nicList += nicDesc
 
-                content = header + diskList + nicList + footer
+            content = header + diskList + nicList + footer
 
-                # write the template to the file
-                hash = hashlib.sha1(str(random.random()))
-                vmFilename = "/tmp/" + hash.hexdigest() + ".vm"
+            # write the template to the file
+            hash = hashlib.sha1(str(random.random()))
+            vmFilename = "/tmp/" + hash.hexdigest() + ".vm"
 
-                fout = open(vmFilename, "w")
-                fout.write(content)
-                fout.close()
+            fout = open(vmFilename, "w")
+            fout.write(content)
+            fout.close()
 
-                # create the vnet
-                try:
-                    proc = subprocess.Popen(["onevm", "create", vmFilename])
-                    proc.wait()
-                except:
-                    raise commandEngineError(420, "Fail to create vm using"\
-                            " command onevm and vm template file %s" % vmFilename)
+            # create the vnet
+            try:
+                proc = subprocess.Popen(["onevm", "create", vmFilename])
+                proc.wait()
+            except:
+                raise commandEngineError(420, "Fail to create vm using"\
+                        " command onevm and vm template file %s" % vmFilename)
 
-                os.remove(vmFilename)
-                
-                time.sleep(sleepCycle)
+            os.remove(vmFilename)
+            
+            time.sleep(sleepCycle)
 
-            return [0, "successful"]
-        elif(self._command.commID == 1):
-            return [401, "Undefined command"]
-        else:
-            return [401, "Undefined command"]
+        return [0, "successful"]
+
+    def _actionDestroy(self):
+        return [401, "Undefined command"]
+
+    def _actionList(self):
+        return [401, "Undefined command"]
 
 class Listener:
     _bindAddress = None
