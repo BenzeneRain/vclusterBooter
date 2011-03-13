@@ -145,7 +145,7 @@ class vCluster:
         self._passwd = config.get("server", "passwd")
 
         analyzer = confAnalyzer(self._templateFilename)
-        package = pickle.dumps(analyzer.command)
+        package = pickle.dumps(analyzer.command, 2)
 
         sender = Sender(self._hostname, self._hostport)
         
