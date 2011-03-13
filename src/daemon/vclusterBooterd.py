@@ -100,7 +100,8 @@ OS = [
 """
             footerTemplate = "REQUIREMENTS = \"FREEMEMORY > %s\"\nRANK = \"- RUNNING_VMS\"\n"
 
-            nicTemplate = "NIC = [NETWORK = \"%s\"]\n"
+            nicWithoutIPTemplate = "NIC = [NETWORK = \"%s\"]\n"
+            nicWithIPTemplate = "NIC = [NETWORK = \"%s\", IP=%s]\n"
 
             diskTemplate = """
 DISK = [
@@ -126,11 +127,16 @@ DISK = [
                     return [501, "Cannot find the root device"]
 
                 header = headerTemplate % (template.name, template.memory, rootDevice) 
-                footer = footerTemplate % (template.memory, )
+                footer = footerTemplate % (str(int(template.memory) * 1024), )
 
                 nicList = ""
                 for nic in template.networkNames:
-                    nicDesc = nicTemplate % (networkNameMap[nic], )                     
+                    (networkType, networkAddress) = self._command.cluster.networks[nic]
+
+                    if networkType == "Public":
+                        nicDesc = nicWithIPTemplate % (networkNameMap[nic], networkAddress)
+                    else:
+                        nicDesc = nicWithoutIPTemplate % (networkNameMap[nic], )                     
                     nicList += nicDesc
 
                 content = header + diskList + nicList + footer
