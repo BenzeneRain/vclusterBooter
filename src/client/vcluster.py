@@ -67,7 +67,7 @@ class confAnalyzer:
                 "START_IP"]
 
         try:
-            fin = open(filename)
+            fin = open(filename, "r")
 
             rawConfigs = fin.read();
             fin.close()
@@ -124,8 +124,8 @@ class confAnalyzer:
             
             self.command = command
             
-        except IOError:
-            print "Fail to read the configuration file"
+        except IOError as e:
+            raise e
     
     def _print(self):
         print "Number of VM: %s\nMemory size: %s\nPublic IP: %s\nStart IP: %s\n" \
@@ -133,19 +133,72 @@ class confAnalyzer:
 
 class vCluster:
 
-    def __init__(self, templateFilename, configFilename):
-        self._templateFilename = templateFilename
-        self._configFilename = configFilename
+    def __init__(self):
+        self._configFilename = "vcluster.conf"
 
-    def run(self):
-        config = ConfigParser()
-        config.read(self._configFilename)
-        self._hostname = config.get("server", "hostname")
-        self._hostport = config.get("server", "port")
-        self._passwd = config.get("server", "passwd")
+    def run(self, args):
 
-        analyzer = confAnalyzer(self._templateFilename)
-        package = pickle.dumps(analyzer.command, 2)
+        action = args[0]
+        if action == "create":
+            if len(args) < 2:
+                self.printHelp()
+            else:
+                self._templateFilename = args[1]
+                self._actionCreate()
+        elif action == "list":
+            pass
+        elif action == "destroy":
+            pass
+        elif action == "help":
+            self.printHelp()
+        else:
+            self.printHelp()
+
+    @staticmethod
+    def printHelp():
+            print "Usage: ./vcluster.py <action> [args]\n"
+            print "Action list:"
+            print "\tcreate\tcreate a cluster according to the given template"
+            print "\t\t\te.g.: ./vcluster.py create templateFilename"
+            print "\tdestroy\tdestroy the cluster acorrding to the given cluster ID"
+            print "\t\t\te.g.: ./vcluster.py destroy 1"
+            print "\tlist\tlist all running clusters and their status"
+            print "\t\t\te.g.: ./vcluster.py list"
+            print "\thelp\tprint this help information"
+            print "\t\t\te.g.: ./vcluster.py help"
+            print "\n\n"
+            print "Notice:\n"
+            print "Before running the vcluster.py, please make sure you set the current \n"\
+                  "remote server ip, port, and your access password in the ./vcluster.conf file"
+            print "Example vcluster.conf:"
+            print "[server]"
+            print "hostname=cloud.cs.hku.hk"
+            print "port=57305"
+            print "passwd=1234567"
+
+
+    def _actionCreate(self):
+        try:
+            config = ConfigParser()
+            config.read(self._configFilename)
+            self._hostname = config.get("server", "hostname")
+            self._hostport = config.get("server", "port")
+            self._passwd = config.get("server", "passwd")
+        except ConfigParser.Error as e:
+            print e
+            return
+
+        try:
+            analyzer = confAnalyzer(self._templateFilename)
+            package = pickle.dumps(analyzer.command, 2)
+        except IOError:
+            print "Fail to read the configuration file"
+            self.printHelp()
+            return
+        except Exception as e:
+            print e
+            self.printHelp()
+            return
 
         sender = Sender(self._hostname, self._hostport)
         
@@ -156,10 +209,9 @@ class vCluster:
             print error
 
 if __name__ == "__main__":
-    if(len(sys.argv) != 2):
-        print "Usage: ./vcluster.py filename"
+    if(len(sys.argv) < 2):
+        vCluster.printHelp()
     else:
-
-        vcluster = vCluster(sys.argv[1], "vcluster.conf")
-        vcluster.run()
+        vcluster = vCluster()
+        vcluster.run(sys.argv[1:])
 
