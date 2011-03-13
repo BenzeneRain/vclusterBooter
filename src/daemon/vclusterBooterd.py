@@ -133,8 +133,8 @@ DISK = [
                 for nic in template.networkNames:
                     (networkType, networkAddress) = self._command.cluster.networks[nic]
 
-                    if networkType == "Public":
-                        nicDesc = nicWithIPTemplate % (networkNameMap[nic], networkAddress)
+                    if networkType == "public":
+                        nicDesc = nicWithIPTemplate % ("public-vnet", networkAddress)
                     else:
                         nicDesc = nicWithoutIPTemplate % (networkNameMap[nic], )                     
                     nicList += nicDesc
