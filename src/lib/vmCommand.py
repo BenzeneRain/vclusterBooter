@@ -3,14 +3,15 @@
 #   _commID     Function
 #       0       Create vClusters
 #       1       Destroy vClusters 
+#       2       List vClusters
 class vmCommand:
     def __init__(self):
         self.commID = -1
-        self.commGeneralArgs = {}
-        self.cluster = vCluster()
+        self.commGeneralArgs = []
+        self.cluster = vClusterTemplate()
         self.passwdHash = ""
 
-class vCluster:
+class vClusterTemplate:
     def __init__(self):
         self.vmNR = 0
         self.vmTemplates = []

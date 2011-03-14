@@ -10,6 +10,7 @@ import random
 import time
 
 from lib.vmCommand import *
+from lib.vmResult import *
 
 #WARNING: This program is written in Python 2.6
 
@@ -22,33 +23,43 @@ class commandEngineError:
 
 class commandEngine:
 
-    _command = None
-    _vclusterInstance = []
 
-    def __init__(self, command):
-        self._command = command
+    def __init__(self, command = None):
+        self._vclusterInstances = {}
+        self._vclusterID = 0
 
     # execute the command
     # return: [ret, msg]
     # ret is the return code
     # msg is the message that explains the code
-    def run(self, sleepCycle = 0):
+    def run(self, command = None, sleepCycle = 0):
+
+        self._command = command
         if self._command is None:
             return [400, "No command found"]
         
+        commandResult = vmCommandResult()
+
         if(self._command.commID == 0):
-            [retCode, msg] = self._actionCreate(sleepCycle)
+            [retCode, msg, instance] = self._actionCreate(sleepCycle)
+            commandResult.clusters.append(instance)
         elif(self._command.commID == 1):
             [retCode, msg] = self._actionDestroy()
         elif(self._command.commID == 2):
-            [retCode, msg] = self._actionList()
+            [retCode, msg, list] = self._actionList()
+            commandResult.clusters = list
         else:
             retCode = 401
             msg = "Undefined Command"
 
-        return [retCode, msg]
+        commandResult.retCode = retCode
+        commandResult.msg = msg
+        return commandResult
 
     def _actionCreate(self, sleepCycle):
+
+        instance = vClusterInstance()
+
         networkNameMap = {}
         vnetFilename = ""
         networkNames = self._command.cluster.networks.keys()
@@ -65,7 +76,7 @@ class commandEngine:
                 hash = hashlib.sha1(networkName + "-" + str(random.random()))
                 UID = networkName + "-" + str(hash.hexdigest());
                 networkNameMap[networkName] = UID
-
+                
                 networkTemplate = networkTemplate % (UID, bridge) 
 
                 # add the LEASES = [IP=X.X.X.X] part
@@ -91,15 +102,22 @@ class commandEngine:
 
                 # create the vnet
                 try:
-                    proc = subprocess.Popen(["onevnet", "create", vnetFilename])
+                    proc = subprocess.Popen(["onevnet", "create", vnetFilename], stdout = PIPE)
+                    output = proc.communicate()[0]
                     proc.wait()
                 except:
                     raise commandEngineError(420, "Fail to create vnet using"\
                             " command onevnet and vnet template file %s" % vnetFilename)
 
+
                 # delete the vnet template file after we create the vnet
                 os.remove(vnetFilename)
+
+                # sanity check
+                output = output.split(" ")
+                instance.networks.append(("private", UID, networkSetting[1], output[1])) 
             else:
+                instance.networks.append(("public", "public-vnet", netoworkSetting[1], -1))
                 # we do not need to care generating the vnetwork template for the public network
                 continue
 
@@ -124,13 +142,18 @@ DISK = [
             clone = "no"]
 """
         for vmIndex in range(int(self._command.cluster.vmNR)):
+            vminst = vmInstance()
+
             template = self._command.cluster.vmTemplates[vmIndex]
-            
+
             rootDevice = ""
 
+            # process disk list
             diskList = ""
             for diskInfo in template.disks:
                 diskDesc = diskTemplate % (diskInfo.diskName, diskInfo.diskTarget) 
+                vminst.disks.append(diskInfo.diskName + ":" + diskInfo.diskTarget)
+
                 if int(diskInfo.isRoot) != 0:
                     rootDevice = diskInfo.diskTarget
                 diskList += diskDesc
@@ -138,17 +161,24 @@ DISK = [
             if rootDevice == "":
                 return [501, "Cannot find the root device"]
 
+            # process header and footer
             header = headerTemplate % (template.name, template.memory, rootDevice) 
             footer = footerTemplate % (str(int(template.memory) * 1024), )
 
+            vminst.name = template.name
+            vminst.memSize = int(template.memory)
+
+            # process nics
             nicList = ""
             for nic in template.networkNames:
                 (networkType, networkAddress) = self._command.cluster.networks[nic]
 
                 if networkType == "public":
                     nicDesc = nicWithIPTemplate % ("public-vnet", networkAddress)
+                    vminst.networkName.append("public-vnet")
                 else:
                     nicDesc = nicWithoutIPTemplate % (networkNameMap[nic], )                     
+                    vminst.networkName.append(networkNameMap[nic])
                 nicList += nicDesc
 
             content = header + diskList + nicList + footer
@@ -161,25 +191,72 @@ DISK = [
             fout.write(content)
             fout.close()
 
-            # create the vnet
+            # create the vm
             try:
-                proc = subprocess.Popen(["onevm", "create", vmFilename])
+                proc = subprocess.Popen(["onevm", "create", vmFilename, "-v"], stdout=PIPE)
+                output = proc.communicate()[0]
                 proc.wait()
             except:
                 raise commandEngineError(420, "Fail to create vm using"\
                         " command onevm and vm template file %s" % vmFilename)
 
             os.remove(vmFilename)
-            
+
+            # sanity check
+            output = output.split(" ")
+            vminst.id = int(output[1])
+            instance.vmInstances.append(vminst)
+
             time.sleep(sleepCycle)
 
-        return [0, "successful"]
+        # Ugly method
+        instance.vmNR = self._command.cluster.vmNR
+        instance.id = self._vclusterID;
+        self._vclusterInstances[instance.id] = instance
+        self._vclusterID += 1
+
+        return [0, "successful", instance]
 
     def _actionDestroy(self):
-        return [401, "Undefined command"]
+        # vCluster to be destroyed is specified by its id
+        # and stored in the self._command.commandGeneralArgs
+
+        if len(self._command.commandGeneralArgs) != 1:
+            return [402, "No vCluster ID is given"]
+
+        # Sanity Check
+        vclusterID = int(self._command.commandGeneralArgs[0])
+        
+        if vclusterID not in self._vclusterInstances:
+            return [403, "vCluster with ID %d is not existed" % (vclusterID, )]
+
+        instance = self._vclusterInstances[vclusterID]
+        
+        # delete vm instances first
+        for vmInst in instance.vmInstances:
+            try:
+                proc = subprocess.Popen(["onevm", "delete", str(vmInst.id)])
+                proc.wait()
+            except:
+                raise commandEngineError(421, "Fail to delete vm with id %d" % (vmInst.id,))
+
+        # delete networks
+        for network in instance.networks:
+            if network[0] == "public":
+                continue
+
+            try:
+                proc = subprocess.Popen(["onevnet", "delete", str(network[3])])
+                proc.wait()
+            except:
+                raise commandEngineError(422, "Fail to delete network with id %d" % (network[3],))
+
+        del self._vclusterInstances[vclusterID]
+
+        return [0, "Successful"]
 
     def _actionList(self):
-        return [401, "Undefined command"]
+        return [0, "Successful", self._vclusterInstances]
 
 class Listener:
     _bindAddress = None
@@ -220,6 +297,7 @@ class Listener:
 
         # Infinite loop for request handling
         # No need to use multithread here
+        engine = commandEngine()
         while(1):
             conn, addr = self._sock.accept()
             print "Connection from ", addr
@@ -228,18 +306,25 @@ class Listener:
             if len(rawData) > 0:
                 try:
                     vmCommand = pickle.loads(rawData)
-                    engine = commandEngine(vmCommand)
-                    [ret, msg] = engine.run(sleepCycle)
+                    result = engine.run(vmCommand, sleepCycle)
                 except commandEngineError as e:
-                    msg = str(e)
+                    result.code = 430
+                    result.msg = str(e)
                     print msg
                 except:
                     msg = "Unknown Error"
+                    result = vmCommandResult()
+                    result.code = 440
+                    result.msg = msg
+                    print msg
             else:
-                ret = 404 
-                msg = "ERROR 404, failed to extract the vmCommand packets"
+                result = vmCommandResult()
+                result.ret = 404 
+                result.msg = "ERROR 404, failed to extract the vmCommand packets"
+                print msg
 
-            self._sendMessage(conn, msg)
+            outPacket = pickle.dumps(result, 2)
+            self._sendMessage(conn, outPacket)
             conn.close()
 
     # read and extract messages

@@ -7,6 +7,7 @@ import hashlib
 from ConfigParser import ConfigParser
 
 from lib.vmCommand import *
+from lib.vmResult import *
 
 class SenderError:
     def __init__(self, value, msg):
@@ -39,6 +40,7 @@ class Sender:
 
         try:
             self._sock.send(packet)
+
             dataSeg = self._sock.recv(4096)
             data = dataSeg
 
@@ -135,6 +137,14 @@ class vCluster:
 
     def __init__(self):
         self._configFilename = "vcluster.conf"
+        try:
+            config = ConfigParser()
+            config.read(self._configFilename)
+            self._hostname = config.get("server", "hostname")
+            self._hostport = config.get("server", "port")
+            self._passwd = config.get("server", "passwd")
+        except ConfigParser.Error as e:
+            print e
 
     def run(self, args):
 
@@ -146,9 +156,12 @@ class vCluster:
                 self._templateFilename = args[1]
                 self._actionCreate()
         elif action == "list":
-            pass
+            self._actionList()
         elif action == "destroy":
-            pass
+            if len(args) < 2:
+                self.printHelp
+            else:
+                self._actionDestroy(int(args[1]))
         elif action == "help":
             self.printHelp()
         else:
@@ -178,15 +191,6 @@ class vCluster:
 
 
     def _actionCreate(self):
-        try:
-            config = ConfigParser()
-            config.read(self._configFilename)
-            self._hostname = config.get("server", "hostname")
-            self._hostport = config.get("server", "port")
-            self._passwd = config.get("server", "passwd")
-        except ConfigParser.Error as e:
-            print e
-            return
 
         try:
             analyzer = confAnalyzer(self._templateFilename)
@@ -203,8 +207,59 @@ class vCluster:
         sender = Sender(self._hostname, self._hostport)
         
         try:
-           retMsg = sender.send(package)
-           print retMsg
+            retMsg = sender.send(package)
+            result = pickle.loads(retMsg)
+
+            if result.retCode == 0:
+                print result.msg
+                for cluster in result.clusters:
+                    print cluster
+            else:
+                print "ERROR %s: %s" % (result.retCode, result.msg)
+
+        except SenderError as error:
+            print error
+
+    def _actionList(self):
+        command = vmCommand()
+        command.commID = 2
+
+        package = pickle.dumps(command, 2)
+
+        sender = Sender(self._hostname, self._hostport)
+        
+        try:
+            retMsg = sender.send(package)
+            result = pickle.loads(retMsg)
+
+            if result.retCode == 0:
+                print result.msg
+                for cluster in result.clusters:
+                    print cluster
+            else:
+                print "ERROR %s: %s" % (result.retCode, result.msg)
+
+        except SenderError as error:
+            print error
+
+    def _actionDestroy(self, id):
+        command = vmCommand()
+        command.commID = 1
+        command.commGeneralArgs.append(id)
+
+        package = pickle.dumps(command, 2)
+
+        sender = Sender(self._hostname, self._hostport)
+        
+        try:
+            retMsg = sender.send(package)
+            result = pickle.loads(retMsg)
+
+            if result.retCode == 0:
+                print result.msg
+            else:
+                print "ERROR %s: %s" % (result.retCode, result.msg)
+
         except SenderError as error:
             print error
 
