@@ -18,12 +18,12 @@ class vClusterInstance:
 
     def __str__(self):
         str = ""
-        str += "==============================================================="
-        str += "vClusterID\t# of VM\t"
-        str += "---------------------------------------------------------------"
-        str += "Networks:                                                      "
-        str += "---------------------------------------------------------------"
-        str += "Name\t\t\t\tType\tMode\tIP                                     "
+        str += "===============================================================\n"
+        str += "vClusterID\t# of VM\t\n"
+        str += "---------------------------------------------------------------\n"
+        str += "Networks:                                                      \n"
+        str += "---------------------------------------------------------------\n"
+        str += "Name\t\t\t\tType\tMode\tIP                                     \n"
         
         for network in self.networks:
             if network[0] == "private":
@@ -34,10 +34,10 @@ class vClusterInstance:
                 str += "N/A"
             str += "\n"
 
-        str += "---------------------------------------------------------------"
-        str += "Virtual Machines:"
-        str += "---------------------------------------------------------------"
-        str += "ID\tName\tMemory(MB)\tNetworks\t\t\tDisks\t\t\t"
+        str += "---------------------------------------------------------------\n"
+        str += "Virtual Machines:\n"
+        str += "---------------------------------------------------------------\n"
+        str += "ID\tName\tMemory(MB)\tNetworks\t\t\t\tDisks\t\t\t\n"
 
         for vminst in self.vmInstances:
             str += "%d\t%s\t%d\t" % (int(vminst.id), vminst.name, int(vminst.memSize))
@@ -45,10 +45,11 @@ class vClusterInstance:
             for network in vminst.networkName:
                 str += "%s\t" % (network, )
 
+            str += "\t"
             for disk in vminst.disks:
                 str += "%s\t" % (disk, )
             str += "\n"
-        str += "==============================================================="
+        str += "===============================================================\n"
 
         return str
 

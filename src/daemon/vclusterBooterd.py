@@ -258,7 +258,7 @@ DISK = [
         return [0, "Successful"]
 
     def _actionList(self):
-        return [0, "Successful", self._vclusterInstances]
+        return [0, "Successful", self._vclusterInstances.values()]
 
 class Listener:
     _bindAddress = None
