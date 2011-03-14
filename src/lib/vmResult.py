@@ -44,7 +44,7 @@ class vClusterInstance:
             str += "%d\t%s\t\t%d\t%s\t" % (int(vminst.id), \
                     vminst.name[:15], int(vminst.memSize), vminst.status[:7])
 
-            spaceShift = "\t" * 5
+            spaceShift = "\t" * 6
             
             maxLoop = max(len(vminst.networkName), len(vminst.disks), len(vminst.ips))
             
