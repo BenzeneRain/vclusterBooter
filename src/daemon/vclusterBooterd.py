@@ -213,6 +213,7 @@ DISK = [
                 else:
                     nicDesc = nicWithoutIPTemplate % (networkNameMap[nic], )                     
                     vminst.networkName.append(networkNameMap[nic])
+                    vminst.ips.append("N/A")
                 nicList += nicDesc
 
             content = header + diskList + nicList + footer
