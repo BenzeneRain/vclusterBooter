@@ -4,6 +4,7 @@ import os, sys
 import pickle
 import socket
 import hashlib
+import time
 from ConfigParser import ConfigParser
 
 from lib.vmCommand import *
@@ -194,7 +195,8 @@ class vCluster:
 
         try:
             analyzer = confAnalyzer(self._templateFilename)
-            package = pickle.dumps(analyzer.command, 2)
+            command = self._addAuthInfo(analyzer.command)
+            package = pickle.dumps(command, 2)
         except IOError:
             print "Fail to read the configuration file"
             self.printHelp()
@@ -223,6 +225,7 @@ class vCluster:
     def _actionList(self):
         command = vmCommand()
         command.commID = 2
+        command = self._addAuthInfo(command)
 
         package = pickle.dumps(command, 2)
 
@@ -246,6 +249,7 @@ class vCluster:
         command = vmCommand()
         command.commID = 1
         command.commGeneralArgs.append(id)
+        command = self._addAuthInfo(command)
 
         package = pickle.dumps(command, 2)
 
@@ -262,6 +266,18 @@ class vCluster:
 
         except SenderError as error:
             print error
+    
+    def _addAuthInfo(command):
+        ISOTIMEFORMAT='%Y-%m-%d %X'
+        timeStr = time.strftime(ISOTIMEFORMAT, time.localtime(time.time()))
+        authStr = timeStr + self._passwd
+        hash = hashlib.sha1(authStr)
+        authHash = hash.hexdigest()
+        
+        command.passwd = authHash
+        command.timestamp = timeStr
+
+        return command
 
 if __name__ == "__main__":
     if(len(sys.argv) < 2):

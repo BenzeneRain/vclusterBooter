@@ -24,9 +24,10 @@ class commandEngineError:
 class commandEngine:
 
 
-    def __init__(self, command = None):
+    def __init__(self, command = None, passwd=""):
         self._vclusterInstances = {}
         self._vclusterID = 0
+        self._passwd = passwd
 
     # execute the command
     # return: [ret, msg]
@@ -35,10 +36,18 @@ class commandEngine:
     def run(self, command = None, sleepCycle = 0):
 
         self._command = command
-        if self._command is None:
-            return [400, "No command found"]
-        
         commandResult = vmCommandResult()
+
+        if self._command is None:
+            commandResult.retCode = 400
+            commandResult.msg = "No command found"
+            return commandResult
+        
+
+        if not self._authenticateUser(self._command):
+            commandResult.retCode = 451
+            commandResult.msg = "Authentication failed"
+            return commandResult
 
         if(self._command.commID == 0):
             [retCode, msg, instance] = self._actionCreate(sleepCycle)
@@ -56,6 +65,16 @@ class commandEngine:
         commandResult.msg = msg
         return commandResult
 
+    def _authenticateUser(command):
+        authStr = command.timestamp + self._passwd
+        hash = hashlib.sha1(authStr)
+        authHash = hash.hexdigest()
+
+        if authHash == command.passwd:
+            return True
+        else:
+            return False
+
     def _actionCreate(self, sleepCycle):
 
         instance = vClusterInstance()
@@ -68,6 +87,8 @@ class commandEngine:
         for networkIndex in range(numberOfNames):
             networkName = networkNames[networkIndex]
             networkSetting = self._command.cluster.networks[networkName]
+
+            netInst = vNetInstance()
             if(networkSetting[0] == "private"):
                 bridge = "eth1"
 
@@ -116,9 +137,19 @@ class commandEngine:
                 outputs = output.strip("\n").split(" ")
                 if outputs[0] != "ID:":
                     raise commandEngineError(422, "Fail to create vnet with ERROR message: %s" % (output, ))
-                instance.networks.append(("private", UID, networkSetting[1], outputs[1])) 
+                netInst.name = UID
+                netInst.type = "private"
+                netInst.mode = "FIXED"
+                netInst.IP = networkSetting[1]
+                netInst.id = outputs[1]
+                instance.networks.append(netInst)
             else:
-                instance.networks.append(("public", "public-vnet", networkSetting[1], -1))
+                netInst.name = "public-vnet"
+                netInst.type = "public"
+                netInst.mode = "RANGED"
+                netInst.IP = networkSetting[1]
+                netInst.id = -1
+                instance.networks.append(netInst)
                 # we do not need to care generating the vnetwork template for the public network
                 continue
 
@@ -177,6 +208,7 @@ DISK = [
                 if networkType == "public":
                     nicDesc = nicWithIPTemplate % ("public-vnet", networkAddress)
                     vminst.networkName.append("public-vnet")
+                    vminst.ips.append(networkAddress)
                 else:
                     nicDesc = nicWithoutIPTemplate % (networkNameMap[nic], )                     
                     vminst.networkName.append(networkNameMap[nic])
@@ -267,10 +299,11 @@ class Listener:
     _sock = None
 
     # Constructor
-    def __init__(self, hostname = 'localhost', hostport = 57305):
+    def __init__(self, hostname = 'localhost', hostport = 57305, passwd=""):
 
         self._bindAddress = socket.gethostbyname(hostname)
         self._bindPort = hostport
+        self._passwd = passwd
 
     # Running the Listner, which will listen for the incoming events
     def run(self, sleepCycle = 0):
@@ -299,7 +332,7 @@ class Listener:
 
         # Infinite loop for request handling
         # No need to use multithread here
-        engine = commandEngine()
+        engine = commandEngine(passwd = self._passwd)
         while(1):
             conn, addr = self._sock.accept()
             print "Connection from ", addr
@@ -368,11 +401,12 @@ class vClusterBooterd:
             self._hostname = config.get('server', 'hostname')
             self._hostport = config.get('server', 'port')
             self._vmCreateCycle = config.get('server', 'vmCreateCycle')
+            self._passwd = config.get('server', 'passwd')
 
             print "Hostname is %s, port is %s" % (self._hostname, self._hostport)
 
             # Run the listener
-            self._listener = Listener(self._hostname, self._hostport)
+            self._listener = Listener(self._hostname, self._hostport, self._passwd)
             ret = self._listener.run(int(self._vmCreateCycle))
 
         except ConfigParser.Error:

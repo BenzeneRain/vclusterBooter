@@ -10,6 +10,7 @@ class vmCommand:
         self.commGeneralArgs = []
         self.cluster = vClusterTemplate()
         self.passwdHash = ""
+        self.timestamp = ""
 
 class vClusterTemplate:
     def __init__(self):

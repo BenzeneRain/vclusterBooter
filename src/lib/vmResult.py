@@ -13,6 +13,7 @@ class vClusterInstance:
         self.id = 0
         self.vmNR = 0
         # network format (public/private, name, ip, id)
+        
         self.networks = []
         self.vmInstances = []
 
@@ -25,32 +26,49 @@ class vClusterInstance:
         str += "---------------------------------------------------------------\n"
         str += "Networks:                                                      \n"
         str += "---------------------------------------------------------------\n"
-        str += "Name\t\t\t\tType\tMode\tIP                                     \n"
+        str += "ID\t\tName\t\tType\tMode\tIP                                     \n"
         
         for network in self.networks:
-            if network[0] == "private":
-                str += "%s\t%s\tRANGE\t%s" % (network[1], network[0], network[2])
-            elif network[0] == "public":
-                str += "%s\t%s\tFIXED\t%s" % (network[1], network[0], network[2])
-            else:
-                str += "N/A"
+            str += "%d\t%s\t%s\t%s\t%s\n" % \
+                    (int(network.id), network.name[:12], network.type,\
+                    network.mode, network.IP)
             str += "\n"
 
         str += "---------------------------------------------------------------\n"
         str += "Virtual Machines:\n"
         str += "---------------------------------------------------------------\n"
-        str += "ID\tName\tMemory(MB)\tNetworks\t\t\t\tDisks\t\t\t\n"
+        str += "ID\t\tName\t\tMemory(MB)\t\tNetworks\t\t\tIP\t\t\tDisks\t\tStatus  \n"
+        str += "---------------------------------------------------------------\n"
 
         for vminst in self.vmInstances:
-            str += "%d\t%s\t%d\t" % (int(vminst.id), vminst.name, int(vminst.memSize))
+            str += "%d\t%s\t%d\t" % (int(vminst.id), vminst.name[:12], int(vminst.memSize))
 
-            for network in vminst.networkName:
-                str += "%s\t" % (network, )
+            spaceShift = " " * len(str)
+            
+            maxLoop = max(len(vminst.networkName), len(vminst.disks), len(vminst.ips))
+            
+            for i in range(maxLoop):
+                if i < 0:
+                    str += spaceShift
 
-            str += "\t"
-            for disk in vminst.disks:
-                str += "%s\t" % (disk, )
-            str += "\n"
+                if i < len(vminst.networkName):
+                    network = vminst.networkName[i]
+                    str += "%s\t" % (network[:16], )
+                else:
+                    str += "\t" * 5
+
+                if i < len(vminst.ips):
+                    ip = vminst.ips[i]
+                    str += "%s\t" % (ip,)
+                else:
+                    str += "\t" * 5
+                    
+                if i < len(vminst.disks):
+                    disk = vminst.disks[i]
+                    str += "%s\t" % (disk, )
+                else:
+                    str += "\t" * 5
+
         str += "===============================================================\n"
 
         return str
@@ -59,11 +77,21 @@ class vmInstance:
 
     def __init__(self):
         self.name = ""
+        self.status = "N/A"
         self.id = 0
         self.memSize = 0
         self.networkName = []
+        self.ips = []
         self.disks = []
 
+class vNetInstance:
+    
+    def __init__(self):
+        self.id = 0
+        self.name = ""
+        self.type = ""
+        self.mode = ""
+        self.IP = ""
 
 # Prohabit it from running itself
 if __name__ == '__main__':
