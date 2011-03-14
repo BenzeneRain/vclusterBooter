@@ -65,7 +65,7 @@ class commandEngine:
         commandResult.msg = msg
         return commandResult
 
-    def _authenticateUser(self.command):
+    def _authenticateUser(self, command):
         authStr = command.timestamp + self._passwd
         hash = hashlib.sha1(authStr)
         authHash = hash.hexdigest()
