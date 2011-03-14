@@ -40,7 +40,7 @@ class vClusterInstance:
         str += "ID\tName\tMemory(MB)\tNetworks\t\t\tDisks\t\t\t"
 
         for vminst in self.vmInstances:
-            str += "%s\t%d\t%d\t" % (vminst.id, vminst.name, vminst.memSize)
+            str += "%d\t%s\t%d\t" % (int(vminst.id), vminst.name, int(vminst.memSize))
 
             for network in vminst.networkName:
                 str += "%s\t" % (network, )

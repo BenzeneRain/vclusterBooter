@@ -221,13 +221,13 @@ DISK = [
 
     def _actionDestroy(self):
         # vCluster to be destroyed is specified by its id
-        # and stored in the self._command.commandGeneralArgs
+        # and stored in the self._command.commGeneralArgs
 
-        if len(self._command.commandGeneralArgs) != 1:
+        if len(self._command.commGeneralArgs) != 1:
             return [402, "No vCluster ID is given"]
 
         # Sanity Check
-        vclusterID = int(self._command.commandGeneralArgs[0])
+        vclusterID = int(self._command.commGeneralArgs[0])
         
         if vclusterID not in self._vclusterInstances:
             return [403, "vCluster with ID %d is not existed" % (vclusterID, )]
