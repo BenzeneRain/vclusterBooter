@@ -267,7 +267,7 @@ class vCluster:
         except SenderError as error:
             print error
     
-    def _addAuthInfo(command):
+    def _addAuthInfo(self, command):
         ISOTIMEFORMAT='%Y-%m-%d %X'
         timeStr = time.strftime(ISOTIMEFORMAT, time.localtime(time.time()))
         authStr = timeStr + self._passwd

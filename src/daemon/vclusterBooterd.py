@@ -161,7 +161,8 @@ OS = [
         bootloader = "/usr/bin/pygrub",
         root = "%s"]
 """
-        footerTemplate = "REQUIREMENTS = \"FREEMEMORY > %s\"\nRANK = \"- RUNNING_VMS\"\n"
+        #footerTemplate = "REQUIREMENTS = \"FREEMEMORY > %s\"\nRANK = \"- RUNNING_VMS\"\n"
+        footerTemplate = "REQUIREMENTS = \"FREEMEMORY > %s\"\nRANK = \"FREEMEMORY\"\n"
 
         nicWithoutIPTemplate = "NIC = [NETWORK = \"%s\"]\n"
         nicWithIPTemplate = "NIC = [NETWORK = \"%s\", IP=%s]\n"
