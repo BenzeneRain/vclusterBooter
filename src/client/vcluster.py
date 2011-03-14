@@ -120,9 +120,9 @@ class confAnalyzer:
             pubTemplate.networkNames = ["privnet", "pubnet"]
             pubTemplate.disks = [vdisk]
 
+            command.cluster.vmTemplates.append(pubTemplate)
             for i in range(int(self._VM_NR) - 1):
                 command.cluster.vmTemplates.append(privTemplate)
-            command.cluster.vmTemplates.append(pubTemplate)
             
             self.command = command
             
