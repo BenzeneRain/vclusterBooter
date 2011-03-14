@@ -69,6 +69,8 @@ class vClusterInstance:
                 else:
                     str += "\t" * 5
 
+                str += "\n"
+
         str += "===============================================================\n"
 
         return str
