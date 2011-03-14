@@ -102,9 +102,8 @@ class commandEngine:
 
                 # create the vnet
                 try:
-                    proc = subprocess.Popen(["onevnet", "create", vnetFilename], stdout = PIPE)
+                    proc = subprocess.Popen(["onevnet", "create", vnetFilename, "-v"], stdout = subprocess.PIPE)
                     output = proc.communicate()[0]
-                    proc.wait()
                 except:
                     raise commandEngineError(420, "Fail to create vnet using"\
                             " command onevnet and vnet template file %s" % vnetFilename)
@@ -114,10 +113,12 @@ class commandEngine:
                 os.remove(vnetFilename)
 
                 # sanity check
-                output = output.split(" ")
-                instance.networks.append(("private", UID, networkSetting[1], output[1])) 
+                outputs = output.strip("\n").split(" ")
+                if outputs[0] != "ID:":
+                    raise commandEngineError(422, "Fail to create vnet with ERROR message: %s" % (output, ))
+                instance.networks.append(("private", UID, networkSetting[1], outputs[1])) 
             else:
-                instance.networks.append(("public", "public-vnet", netoworkSetting[1], -1))
+                instance.networks.append(("public", "public-vnet", networkSetting[1], -1))
                 # we do not need to care generating the vnetwork template for the public network
                 continue
 
@@ -193,9 +194,8 @@ DISK = [
 
             # create the vm
             try:
-                proc = subprocess.Popen(["onevm", "create", vmFilename, "-v"], stdout=PIPE)
+                proc = subprocess.Popen(["onevm", "create", vmFilename, "-v"], stdout=subprocess.PIPE)
                 output = proc.communicate()[0]
-                proc.wait()
             except:
                 raise commandEngineError(420, "Fail to create vm using"\
                         " command onevm and vm template file %s" % vmFilename)
@@ -203,8 +203,10 @@ DISK = [
             os.remove(vmFilename)
 
             # sanity check
-            output = output.split(" ")
-            vminst.id = int(output[1])
+            outputs = output.strip("\n").split(" ")
+            if outputs[0] != "ID:":
+                raise commandEngineError(421, "Fail to create vm with ERROR message: %s" % (output, ))
+            vminst.id = int(outputs[1])
             instance.vmInstances.append(vminst)
 
             time.sleep(sleepCycle)
