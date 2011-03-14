@@ -279,14 +279,14 @@ DISK = [
 
         # delete networks
         for network in instance.networks:
-            if network[0] == "public":
+            if network.type == "public":
                 continue
 
             try:
-                proc = subprocess.Popen(["onevnet", "delete", str(network[3])])
+                proc = subprocess.Popen(["onevnet", "delete", str(network.id)])
                 proc.wait()
             except:
-                raise commandEngineError(422, "Fail to delete network with id %d" % (network[3],))
+                raise commandEngineError(422, "Fail to delete network with id %d" % (network.id,))
 
         del self._vclusterInstances[vclusterID]
 
