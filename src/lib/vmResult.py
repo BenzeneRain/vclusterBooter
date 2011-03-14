@@ -26,48 +26,48 @@ class vClusterInstance:
         str += "---------------------------------------------------------------\n"
         str += "Networks:                                                      \n"
         str += "---------------------------------------------------------------\n"
-        str += "ID\t\tName\t\tType\tMode\tIP                                     \n"
+        str += "ID\tName\t\tType\tMode\tIP                                     \n"
         
         for network in self.networks:
             str += "%d\t%s\t%s\t%s\t%s\n" % \
-                    (int(network.id), network.name[:12], network.type,\
+                    (int(network.id), network.name[:15], network.type,\
                     network.mode, network.IP)
             str += "\n"
 
         str += "---------------------------------------------------------------\n"
         str += "Virtual Machines:\n"
         str += "---------------------------------------------------------------\n"
-        str += "ID\t\tName\t\tMemory(MB)\t\tNetworks\t\t\tIP\t\t\tDisks\t\tStatus  \n"
+        str += "ID\tName\t\tMemory(MB)\tNetworks\tIP\t\tDisks\tStatus  \n"
         str += "---------------------------------------------------------------\n"
 
         for vminst in self.vmInstances:
-            str += "%d\t%s\t%d\t" % (int(vminst.id), vminst.name[:12], int(vminst.memSize))
+            str += "%d\t%s\t%d\t" % (int(vminst.id), vminst.name[:15], int(vminst.memSize))
 
-            spaceShift = " " * len(str)
+            spaceShift = "\t" * 5
             
             maxLoop = max(len(vminst.networkName), len(vminst.disks), len(vminst.ips))
             
             for i in range(maxLoop):
-                if i < 0:
+                if i > 0:
                     str += spaceShift
 
                 if i < len(vminst.networkName):
                     network = vminst.networkName[i]
-                    str += "%s\t" % (network[:16], )
+                    str += "%s\t" % (network[:15], )
                 else:
-                    str += "\t" * 5
+                    str += "\t" * 2
 
                 if i < len(vminst.ips):
                     ip = vminst.ips[i]
                     str += "%s\t" % (ip,)
                 else:
-                    str += "\t" * 5
+                    str += "\t" * 2
                     
                 if i < len(vminst.disks):
                     disk = vminst.disks[i]
-                    str += "%s\t" % (disk, )
+                    str += "%s\t" % (disk[:7], )
                 else:
-                    str += "\t" * 5
+                    str += "\t" * 2
 
                 str += "\n"
 
