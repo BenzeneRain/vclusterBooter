@@ -37,11 +37,12 @@ class vClusterInstance:
         str += "---------------------------------------------------------------------------------\n"
         str += "Virtual Machines:\n"
         str += "---------------------------------------------------------------------------------\n"
-        str += "ID\tName\t\tMemory(MB)\tNetworks\t\tIP\tDisks\tStatus  \n"
+        str += "ID\tName\t\tMemory(MB)\tStatus\tNetworks\t\tIP\tDisks\n"
         str += "---------------------------------------------------------------------------------\n"
 
         for vminst in self.vmInstances:
-            str += "%d\t%s\t\t%d\t" % (int(vminst.id), vminst.name[:15], int(vminst.memSize))
+            str += "%d\t%s\t\t%d\t%s\t" % (int(vminst.id), \
+                    vminst.name[:15], int(vminst.memSize), vminst.status[:7])
 
             spaceShift = "\t" * 5
             

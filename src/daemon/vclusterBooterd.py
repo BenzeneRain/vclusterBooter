@@ -241,6 +241,7 @@ DISK = [
             if outputs[0] != "ID:":
                 raise commandEngineError(421, "Fail to create vm with ERROR message: %s" % (output, ))
             vminst.id = int(outputs[1])
+            vminst.status = "N/A"
             instance.vmInstances.append(vminst)
 
             time.sleep(sleepCycle)
