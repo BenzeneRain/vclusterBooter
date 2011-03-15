@@ -307,7 +307,7 @@ DISK = [
     def _fillInStatusInfo(self, vcInst):
         for vmInst in vcInst.vmInstances:
             try:
-                proc = subprocess.Popen(["onevm", "show", vmInst.id, "-x"], stdout=subprocess.PIPE)
+                proc = subprocess.Popen(["onevm", "show", str(vmInst.id), "-x"], stdout=subprocess.PIPE)
                 vmInfoStr = proc.communicate()
             except:
                 raise commandEngineError(424, "Fail to fill in the vm Status information")
