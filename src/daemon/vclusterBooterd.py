@@ -316,9 +316,9 @@ DISK = [
 
         for vmInst in vcInst.vmInstances:
             for i in range(len(vmInst.networkName)):
-                if cmp(vmInst.ips, "N/A") == 0:
-                   netInfoXml = netInfoMap[vmInst.networkName] 
-                   vmInst.ips = self._extractIPFromXmlByVID(netInfoXml, vmInst.id)
+                if cmp(vmInst.ips[i], "N/A") == 0:
+                   netInfoXml = netInfoMap[vmInst.networkName[i]] 
+                   vmInst.ips[i] = self._extractIPFromXmlByVID(netInfoXml, vmInst.id)
 
         return vcInst
 
