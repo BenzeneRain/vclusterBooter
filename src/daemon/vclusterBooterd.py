@@ -305,8 +305,7 @@ DISK = [
         for netInfo in vcInst.networks:
             if cmp(netInfo.type, "private") == 0:
                 try:
-                    proc = subprocess.Popen(["onevnet", "show", netInfo.name, "|",\
-                            "grep", "LEASE="], stdout=subprocess.PIPE)
+                    proc = subprocess.Popen(["onevnet", "show", netInfo.name, "-x"], stdout=subprocess.PIPE)
                     netInfoStr = proc.communicate() 
                 except:
                     raise commandEngineError(423, "Fail to fill in the network IP information")
