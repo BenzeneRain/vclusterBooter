@@ -389,18 +389,18 @@ class Listener:
                 except commandEngineError as e:
                     result.code = 430
                     result.msg = str(e)
-                    print msg
+                    print result.msg
                 except:
                     msg = "Unknown Error"
                     result = vmCommandResult()
                     result.code = 440
                     result.msg = msg
-                    print msg
+                    print result.msg
             else:
                 result = vmCommandResult()
                 result.ret = 404 
                 result.msg = "ERROR 404, failed to extract the vmCommand packets"
-                print msg
+                print result.msg
 
             outPacket = pickle.dumps(result, 2)
             self._sendMessage(conn, outPacket)
