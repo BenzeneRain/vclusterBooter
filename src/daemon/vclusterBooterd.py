@@ -387,6 +387,7 @@ class Listener:
                     vmCommand = pickle.loads(rawData)
                     result = engine.run(vmCommand, sleepCycle)
                 except commandEngineError as e:
+                    result = vmCommandResult()
                     result.code = 430
                     result.msg = str(e)
                     print result.msg
