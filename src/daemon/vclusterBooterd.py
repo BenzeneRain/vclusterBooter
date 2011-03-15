@@ -395,7 +395,7 @@ DISK = [
                 return "DELETE"
             elif stateNum == 16:
                 return "UNKOWN"
-            else
+            else:
                 return "N/A"
         except:
             return "N/A"
