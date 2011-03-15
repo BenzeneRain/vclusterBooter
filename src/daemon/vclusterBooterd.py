@@ -331,7 +331,7 @@ DISK = [
             currVID = int(VIDNode[0].firstChild.data.strip('\n '))
             if currVID == int(vid):
                 IPNode = lease.getElementsByTagName("IP")
-                ipaddress = IPNode[0].firstChile.data.strip('\n ')
+                ipaddress = IPNode[0].firstChild.data.strip('\n ')
                 return ipaddress
 
         return "N/A"
