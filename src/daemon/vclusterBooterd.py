@@ -249,6 +249,7 @@ DISK = [
             time.sleep(sleepCycle)
 
         instance = self._fillInNetworkInfo(instance)
+        instance = self._fillInStatusInfo(instance)
 
         # Ugly method
         instance.vmNR = self._command.cluster.vmNR
@@ -297,7 +298,24 @@ DISK = [
         return [0, "Successful"]
 
     def _actionList(self):
+        
+        for vcInstanceKey in self._vclusterInstances.keys():
+           self._vclusterInstances[vcInstanceKey] = self._fillInStatusInfo(self._vclusterInstances[vcInstanceKey]) 
+
         return [0, "Successful", self._vclusterInstances.values()]
+
+    def _fillInStatusInfo(self, vcInst):
+        for vmInst in vcInst.vmInstances:
+            try:
+                proc = subprocess.Popen(["onevm", "show", vmInst.id, "-x"], stdout=subprocess.PIPE)
+                vmInfoStr = proc.communicate()
+            except:
+                raise commandEngineError(424, "Fail to fill in the vm Status information")
+
+            vmInfoXml = minidom.parseString(vmInfoStr[0])
+            vmInst.status = self._extractVMStatusFromXml(vmInfoXml)
+
+        return vcInst
 
     def _fillInNetworkInfo(self, vcInst):
         netInfoMap = {}
@@ -335,6 +353,52 @@ DISK = [
                 return ipaddress
 
         return "N/A"
+
+    def _extractVMStatusFromXml(self, xmlroot):
+        try:
+            lcmStateNode = xmlroot.getElementsByTagName("LCM_STATE")
+
+            stateNumStr = lcmStateNode[0].firstChild.data.strip('\n ')
+            stateNum = int(stateNumStr)
+
+            if stateNum == 0:
+                return "LCM_INIT"
+            elif stateNum == 1:
+                return "PROLOG"
+            elif stateNum == 2:
+                return "BOOT"
+            elif stateNum == 3:
+                return "RUNNING"
+            elif stateNum == 4:
+                return "MIGRATE"
+            elif stateNum == 5:
+                return "SAVE_STOP"
+            elif stateNum == 6:
+                return "SAVE_SUSPEND"
+            elif stateNum == 7:
+                return "SAVE_MIGRATE"
+            elif stateNum == 8:
+                return "PROLOG_MIGRATE"
+            elif stateNum == 9:
+                return "PROLOG_RESUME"
+            elif stateNum == 10:
+                return "EPILOG_STOP"
+            elif stateNum == 11:
+                return "EPILOG"
+            elif stateNum == 12:
+                return "SHUTDOWN"
+            elif stateNum == 13:
+                return "CANCEL"
+            elif stateNum == 14:
+                return "FAILURE"
+            elif stateNum == 15:
+                return "DELETE"
+            elif stateNum == 16:
+                return "UNKOWN"
+            else
+                return "N/A"
+        except:
+            return "N/A"
 
 class Listener:
     _bindAddress = None
