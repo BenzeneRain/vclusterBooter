@@ -8,6 +8,8 @@ import hashlib
 import subprocess
 import random
 import time
+import xml
+from xml.dom import minidom
 
 from lib.vmCommand import *
 from lib.vmResult import *
@@ -246,6 +248,8 @@ DISK = [
 
             time.sleep(sleepCycle)
 
+        instance = self._fillInNetworkInfo(instance)
+
         # Ugly method
         instance.vmNR = self._command.cluster.vmNR
         instance.id = self._vclusterID;
@@ -294,6 +298,44 @@ DISK = [
 
     def _actionList(self):
         return [0, "Successful", self._vclusterInstances.values()]
+
+    def _fillInNetworkInfo(self, vcInst):
+        netInfoMap = {}
+
+        for netInfo in vcInst.networks:
+            if cmp(netInfo.type, "private") == 0:
+                try:
+                    proc = subprocess.Popen(["onevnet", "list", netInfo.name, "|",\
+                            "grep", "LEASE="], stdout=subprocess.PIPE)
+                    netInfoStr = proc.communicate() 
+                except:
+                    raise commandEngineError(423, "Fail to fill in the network IP information")
+
+                netInfoXml = minidom.parseString(netInfoStr[0])
+
+                netInfoMap[netInfo.name] = netInfXml
+
+        for vmInst in vcInst.vmInstances:
+            for i in range(len(vmInst.networkName)):
+                if cmp(vmInst.ips, "N/A") == 0:
+                   netInfoXml = netInfoMap[vmInst.networkName] 
+                   vmInst.ips = self._extractIPFromXmlByVID(netInfoXml, vmInst.id)
+
+        return vcInst
+
+    def _extractIPFromXmlByVID(self, xmlroot, vid):
+        leases = xmlroot.getElementsByTagName("LEASE")
+
+        for lease in leases:
+            VIDNode = lease.getElementsByTagName("VID")
+            
+            currVID = int(VIDNode.firstChild.data.strip('\n '))
+            if currVID == int(vid):
+                IPNode = lease.getElementsByTagName("IP")
+                ipaddress = IPNode.firstChile.data.strip('\n ')
+                return ipaddress
+
+        return "N/A"
 
 class Listener:
     _bindAddress = None
