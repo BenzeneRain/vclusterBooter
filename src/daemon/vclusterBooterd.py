@@ -305,7 +305,7 @@ DISK = [
         for netInfo in vcInst.networks:
             if cmp(netInfo.type, "private") == 0:
                 try:
-                    proc = subprocess.Popen(["onevnet", "list", netInfo.name, "|",\
+                    proc = subprocess.Popen(["onevnet", "show", netInfo.name, "|",\
                             "grep", "LEASE="], stdout=subprocess.PIPE)
                     netInfoStr = proc.communicate() 
                 except:
@@ -313,7 +313,7 @@ DISK = [
 
                 netInfoXml = minidom.parseString(netInfoStr[0])
 
-                netInfoMap[netInfo.name] = netInfXml
+                netInfoMap[netInfo.name] = netInfoXml
 
         for vmInst in vcInst.vmInstances:
             for i in range(len(vmInst.networkName)):
